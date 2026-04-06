@@ -76,7 +76,6 @@ export default function UploadPage() {
         <input
           id="gpx-file-input"
           type="file"
-          accept=".gpx"
           className="hidden"
           disabled={uploading}
           onChange={(e) => {

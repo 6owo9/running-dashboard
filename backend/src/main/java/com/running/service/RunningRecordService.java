@@ -8,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.ByteArrayInputStream;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -25,11 +26,21 @@ public class RunningRecordService {
         if (originalFilename == null || !originalFilename.toLowerCase().endsWith(".gpx")) {
             throw new IllegalArgumentException("GPX 파일만 업로드할 수 있습니다.");
         }
-        String coordinatesJson = gpxParserService.parseCoordinates(file.getInputStream());
+
+        // 파일 바이트를 한 번만 읽어 좌표·날짜 모두 파싱
+        byte[] fileBytes = file.getBytes();
+        String coordinatesJson = gpxParserService.parseCoordinates(new ByteArrayInputStream(fileBytes));
+
+        // runDate 미입력 시 GPX time 태그에서 추출, 없으면 오늘
+        LocalDate resolvedDate = runDate;
+        if (resolvedDate == null) {
+            LocalDate gpxDate = gpxParserService.parseRunDate(new ByteArrayInputStream(fileBytes));
+            resolvedDate = (gpxDate != null) ? gpxDate : LocalDate.now();
+        }
 
         RunningRecord record = new RunningRecord();
         record.setTitle(title);
-        record.setRunDate(runDate);
+        record.setRunDate(resolvedDate);
         record.setDistanceKm(distanceKm);
         record.setDurationSeconds(durationSeconds);
         record.setCoordinates(coordinatesJson);

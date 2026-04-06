@@ -31,10 +31,8 @@ public class RunningRecordController {
         String resolvedTitle = (title != null && !title.isBlank())
                 ? title
                 : stripExtension(file.getOriginalFilename());
-        // runDate 미입력 시 오늘 날짜 사용
-        LocalDate resolvedDate = (runDate != null) ? runDate : LocalDate.now();
 
-        RunningRecordResponse response = runningRecordService.upload(file, resolvedTitle, resolvedDate, distanceKm, durationSeconds);
+        RunningRecordResponse response = runningRecordService.upload(file, resolvedTitle, runDate, distanceKm, durationSeconds);
         return ResponseEntity.ok(ApiResponse.ok(response));
     }
 

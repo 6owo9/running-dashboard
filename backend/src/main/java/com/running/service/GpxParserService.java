@@ -7,6 +7,7 @@ import org.w3c.dom.NodeList;
 
 import javax.xml.parsers.DocumentBuilderFactory;
 import java.io.InputStream;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -34,6 +35,24 @@ public class GpxParserService {
         }
 
         return objectMapper.writeValueAsString(coordinates);
+    }
+
+    /**
+     * GPX InputStream에서 첫 번째 trkpt의 time 태그를 파싱해 LocalDate 반환
+     * time 태그 없으면 null 반환
+     */
+    public LocalDate parseRunDate(InputStream gpxStream) throws Exception {
+        Document doc = DocumentBuilderFactory.newInstance()
+                .newDocumentBuilder()
+                .parse(gpxStream);
+
+        NodeList times = doc.getElementsByTagName("time");
+        if (times.getLength() == 0) return null;
+
+        // ISO 8601 형식: "2024-01-15T08:30:00Z" → 앞 10자만 사용
+        String timeStr = times.item(0).getTextContent().trim();
+        if (timeStr.length() < 10) return null;
+        return LocalDate.parse(timeStr.substring(0, 10));
     }
 
     /**
