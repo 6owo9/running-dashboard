@@ -1,15 +1,14 @@
-import { useRef, useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { uploadGpx, getRunningRecords } from '../api/runningApi'
 
 interface RunningRecord {
   id: number
-  date: string
+  runDate: string
   distanceKm: number
-  durationMin: number
+  durationSeconds: number | null
 }
 
 export default function UploadPage() {
-  const fileInputRef = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [lastUploaded, setLastUploaded] = useState<RunningRecord | null>(null)
@@ -68,17 +67,18 @@ export default function UploadPage() {
       <h2 className="font-semibold text-gray-800 mb-3">기록 업로드</h2>
 
       {/* 업로드 영역 */}
-      <div
-        className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors"
-        onClick={() => !uploading && fileInputRef.current?.click()}
+      <label
+        htmlFor="gpx-file-input"
+        className="block border-2 border-dashed border-gray-300 rounded-xl p-6 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors"
         onDrop={handleDrop}
         onDragOver={(e) => e.preventDefault()}
       >
         <input
-          ref={fileInputRef}
+          id="gpx-file-input"
           type="file"
           accept=".gpx"
           className="hidden"
+          disabled={uploading}
           onChange={(e) => {
             const file = e.target.files?.[0]
             if (file) handleFile(file)
@@ -93,7 +93,7 @@ export default function UploadPage() {
             <p className="text-gray-400 text-xs mt-1">최대 10MB · .gpx 형식</p>
           </>
         )}
-      </div>
+      </label>
 
       {/* 업로드 에러 */}
       {uploadError && (
@@ -103,9 +103,11 @@ export default function UploadPage() {
       {/* 업로드 완료 요약 카드 */}
       {lastUploaded && (
         <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
-          <p className="text-green-700 text-sm font-medium">✅ 업로드 완료</p>
+          <p className="text-green-700 text-sm font-medium">업로드 완료</p>
           <p className="text-green-600 text-sm mt-0.5">
-            {lastUploaded.distanceKm.toFixed(2)} km · {lastUploaded.durationMin}분 · {lastUploaded.date}
+            {lastUploaded.distanceKm.toFixed(2)} km
+            {lastUploaded.durationSeconds != null && ` · ${Math.round(lastUploaded.durationSeconds / 60)}분`}
+            {' · '}{lastUploaded.runDate}
           </p>
         </div>
       )}
@@ -123,9 +125,10 @@ export default function UploadPage() {
           <ul className="divide-y divide-gray-100">
             {records.map((r) => (
               <li key={r.id} className="flex justify-between items-center py-2">
-                <span className="text-sm text-gray-700">{r.date}</span>
+                <span className="text-sm text-gray-700">{r.runDate}</span>
                 <span className="text-sm text-gray-500">
-                  {r.distanceKm.toFixed(2)} km · {r.durationMin}분
+                  {r.distanceKm.toFixed(2)} km
+                  {r.durationSeconds != null && ` · ${Math.round(r.durationSeconds / 60)}분`}
                 </span>
               </li>
             ))}
