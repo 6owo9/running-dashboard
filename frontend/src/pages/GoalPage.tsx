@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react'
 import { getCurrentGoal, saveGoal } from '../api/goalApi'
 
 interface Goal {
-  targetDistanceKm: number
-  achievedDistanceKm: number
+  monthlyDistanceKm: number
+  currentDistanceKm: number
   achievementRate: number
 }
 
@@ -65,8 +65,8 @@ export default function GoalPage() {
       ) : goal ? (
         <div className="mb-4">
           <div className="flex justify-between text-sm text-gray-600 mb-1">
-            <span>{goal.achievedDistanceKm.toFixed(1)} km 달성</span>
-            <span>목표 {goal.targetDistanceKm} km</span>
+            <span>{goal.currentDistanceKm.toFixed(1)} km 달성</span>
+            <span>목표 {goal.monthlyDistanceKm} km</span>
           </div>
           {/* CSS 프로그레스 바 */}
           <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden">

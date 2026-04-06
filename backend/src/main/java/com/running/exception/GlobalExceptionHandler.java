@@ -7,12 +7,20 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.servlet.NoHandlerFoundException;
 
 import java.util.NoSuchElementException;
 
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    @ExceptionHandler(NoHandlerFoundException.class)
+    public ResponseEntity<ApiResponse<Void>> handleNoHandler(NoHandlerFoundException e) {
+        log.warn("존재하지 않는 경로: {}", e.getRequestURL());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(ApiResponse.fail("요청한 경로를 찾을 수 없습니다."));
+    }
 
     @ExceptionHandler(NoSuchElementException.class)
     public ResponseEntity<ApiResponse<Void>> handleNotFound(NoSuchElementException e) {

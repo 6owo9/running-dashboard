@@ -21,6 +21,10 @@ public class RunningRecordService {
 
     public RunningRecordResponse upload(MultipartFile file, String title, LocalDate runDate,
                                         double distanceKm, Integer durationSeconds) throws Exception {
+        String originalFilename = file.getOriginalFilename();
+        if (originalFilename == null || !originalFilename.toLowerCase().endsWith(".gpx")) {
+            throw new IllegalArgumentException("GPX 파일만 업로드할 수 있습니다.");
+        }
         String coordinatesJson = gpxParserService.parseCoordinates(file.getInputStream());
 
         RunningRecord record = new RunningRecord();
@@ -45,7 +49,7 @@ public class RunningRecordService {
         List<RunningRecord> records = switch (period) {
             case "today" -> runningRecordRepository.findByRunDate(today);
             case "week" -> runningRecordRepository.findByRunDateBetween(today.minusDays(6), today);
-            default -> runningRecordRepository.findAll();
+            default -> throw new IllegalArgumentException("지원하지 않는 period 값입니다: " + period);
         };
         return records.stream().map(this::toResponse).toList();
     }

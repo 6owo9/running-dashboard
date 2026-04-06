@@ -4,17 +4,12 @@ import { getRunningRecords } from '../api/runningApi'
 
 type Period = 'today' | 'week'
 
-interface Coordinate {
-  lat: number
-  lng: number
-}
-
 interface RunningRecord {
   id: number
   date: string
   distanceKm: number
   durationMin: number
-  coordinates: Coordinate[]
+  coordinates: number[][]
 }
 
 export default function MapPage() {
@@ -71,7 +66,7 @@ export default function MapPage() {
     const allLatLngs: L.LatLngTuple[] = []
     records.forEach((record) => {
       if (record.coordinates.length === 0) return
-      const latlngs: L.LatLngTuple[] = record.coordinates.map((c) => [c.lat, c.lng])
+      const latlngs: L.LatLngTuple[] = record.coordinates.map((c) => [c[0], c[1]])
       L.polyline(latlngs, { color: '#3b82f6', weight: 4, opacity: 0.8 }).addTo(map)
       L.circleMarker(latlngs[0], {
         radius: 7,

@@ -22,13 +22,26 @@ public class RunningRecordController {
     @PostMapping("/upload")
     public ResponseEntity<ApiResponse<RunningRecordResponse>> upload(
             @RequestParam("file") MultipartFile file,
-            @RequestParam("title") String title,
-            @RequestParam("runDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate runDate,
-            @RequestParam("distanceKm") double distanceKm,
+            @RequestParam(value = "title", required = false) String title,
+            @RequestParam(value = "runDate", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate runDate,
+            @RequestParam(value = "distanceKm", required = false, defaultValue = "0") double distanceKm,
             @RequestParam(value = "durationSeconds", required = false) Integer durationSeconds
     ) throws Exception {
-        RunningRecordResponse response = runningRecordService.upload(file, title, runDate, distanceKm, durationSeconds);
+        // title 미입력 시 파일명(확장자 제거) 사용
+        String resolvedTitle = (title != null && !title.isBlank())
+                ? title
+                : stripExtension(file.getOriginalFilename());
+        // runDate 미입력 시 오늘 날짜 사용
+        LocalDate resolvedDate = (runDate != null) ? runDate : LocalDate.now();
+
+        RunningRecordResponse response = runningRecordService.upload(file, resolvedTitle, resolvedDate, distanceKm, durationSeconds);
         return ResponseEntity.ok(ApiResponse.ok(response));
+    }
+
+    private String stripExtension(String filename) {
+        if (filename == null) return "untitled";
+        int dot = filename.lastIndexOf('.');
+        return dot > 0 ? filename.substring(0, dot) : filename;
     }
 
     @GetMapping
