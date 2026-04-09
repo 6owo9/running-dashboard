@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { getCurrentGoal, saveGoal } from '../api/goalApi'
+import { getRunningRecords } from '../api/runningApi'
 
 interface Goal {
   monthlyDistanceKm: number
@@ -9,15 +10,14 @@ interface Goal {
 
 export default function GoalPage() {
   const [goal, setGoal] = useState<Goal | null>(null)
+  const [maxDistance, setMaxDistance] = useState<number | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // 목표 설정 폼
   const [isEditing, setIsEditing] = useState(false)
   const [input, setInput] = useState('')
   const [inputError, setInputError] = useState<string | null>(null)
 
-  // 확인 절차
   const [confirming, setConfirming] = useState(false)
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
@@ -26,10 +26,11 @@ export default function GoalPage() {
     setLoading(true)
     setError(null)
     try {
-      const res = await getCurrentGoal()
-      setGoal(res.data ?? null)
-      // 목표 미설정 상태면 바로 폼 열기
-      if (!res.data) setIsEditing(true)
+      const [goalRes, recsRes] = await Promise.all([getCurrentGoal(), getRunningRecords()])
+      setGoal(goalRes.data ?? null)
+      if (!goalRes.data) setIsEditing(true)
+      const recs: { distanceKm: number }[] = recsRes.data ?? []
+      setMaxDistance(recs.length > 0 ? Math.max(...recs.map((r) => r.distanceKm)) : null)
     } catch (e) {
       setError(e instanceof Error ? e.message : '오류가 발생했습니다.')
     } finally {
@@ -37,9 +38,7 @@ export default function GoalPage() {
     }
   }
 
-  useEffect(() => {
-    loadGoal()
-  }, [])
+  useEffect(() => { loadGoal() }, [])
 
   const handleEditClick = () => {
     setInput(goal ? String(goal.monthlyDistanceKm) : '')
@@ -88,104 +87,114 @@ export default function GoalPage() {
   const rate = Math.min(goal?.achievementRate ?? 0, 100)
 
   return (
-    <section className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-      <div className="flex items-center justify-between mb-3">
-        <h2 className="font-semibold text-gray-800">이번 달 목표</h2>
-        {goal && !isEditing && (
-          <button
-            onClick={handleEditClick}
-            className="text-sm text-blue-500 hover:text-blue-600"
-          >
-            수정
-          </button>
-        )}
-      </div>
-
-      {/* 목표·달성률 */}
-      {loading ? (
-        <p className="text-gray-400 text-sm mb-3">불러오는 중...</p>
-      ) : error ? (
-        <p className="text-red-500 text-sm mb-3">{error}</p>
-      ) : goal && !isEditing ? (
-        <div className="mb-2">
-          <div className="flex justify-between text-sm text-gray-600 mb-1">
-            <span>{goal.currentDistanceKm.toFixed(1)} km 달성</span>
-            <span>목표 {goal.monthlyDistanceKm} km</span>
-          </div>
-          <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-blue-500 rounded-full transition-all duration-500"
-              style={{ width: `${rate}%` }}
-            />
-          </div>
-          <p className="text-right text-xs text-gray-400 mt-1">{rate.toFixed(0)}%</p>
-        </div>
-      ) : !isEditing ? (
-        <p className="text-gray-400 text-sm mb-3">설정된 목표가 없습니다.</p>
-      ) : null}
-
-      {/* 목표 설정 폼 */}
-      {isEditing && !confirming && (
-        <div className="space-y-2">
-          {goal && (
-            <p className="text-sm text-gray-500">
-              현재 목표: <span className="font-medium">{goal.monthlyDistanceKm} km</span>
-            </p>
-          )}
-          <div className="flex gap-2">
-            <input
-              type="number"
-              min="0"
-              step="0.1"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSaveClick()}
-              placeholder="목표 거리 (km)"
-              className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400"
-            />
-            <button
-              onClick={handleSaveClick}
-              className="px-4 py-2 bg-blue-500 text-white text-sm rounded-lg hover:bg-blue-600 transition-colors"
-            >
-              저장
-            </button>
-            {goal && (
+    <section className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 flex-shrink-0">
+      <div className="flex items-start h-full justify-between gap-4">
+        {/* 왼쪽: 제목 + 진행상황 */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-sm font-semibold text-gray-900">이번 달 목표</h2>
+            {goal && !isEditing && (
               <button
-                onClick={handleCancel}
-                className="px-3 py-2 text-sm text-gray-500 hover:text-gray-700"
+                onClick={handleEditClick}
+                className="text-xs text-blue-500 hover:text-blue-600 px-2 py-0.5 rounded-full hover:bg-blue-50 transition-colors"
               >
-                취소
+                수정
               </button>
             )}
           </div>
-          {inputError && <p className="text-red-500 text-sm">{inputError}</p>}
-          {saveError && <p className="text-red-500 text-sm">{saveError}</p>}
-        </div>
-      )}
 
-      {/* 확인 절차 */}
-      {confirming && (
-        <div className="border border-amber-200 bg-amber-50 rounded-lg p-3 space-y-2">
-          <p className="text-sm text-amber-800">
-            목표를 <span className="font-semibold">{input} km</span>로 변경하시겠습니까?
-          </p>
-          <div className="flex gap-2">
-            <button
-              onClick={handleConfirm}
-              disabled={saving}
-              className="px-4 py-1.5 bg-blue-500 text-white text-sm rounded-lg hover:bg-blue-600 disabled:opacity-50 transition-colors"
-            >
-              {saving ? '저장 중...' : '확인'}
-            </button>
-            <button
-              onClick={() => setConfirming(false)}
-              className="px-4 py-1.5 text-sm text-gray-500 hover:text-gray-700"
-            >
-              취소
-            </button>
-          </div>
+          {loading ? (
+            <p className="text-gray-400 text-xs">불러오는 중...</p>
+          ) : error ? (
+            <p className="text-red-500 text-xs">{error}</p>
+          ) : goal && !isEditing ? (
+            <div>
+              <div className="flex items-baseline justify-between mb-1.5">
+                <div>
+                  <span className="text-xl font-bold text-gray-900">{goal.currentDistanceKm.toFixed(1)}</span>
+                  <span className="text-xs text-gray-400 ml-1">/ {goal.monthlyDistanceKm} km</span>
+                </div>
+                <span className={`text-sm font-bold ${rate >= 100 ? 'text-green-500' : 'text-blue-500'}`}>
+                  {rate.toFixed(0)}%
+                </span>
+              </div>
+              <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden mb-1.5">
+                <div
+                  className={`h-full rounded-full transition-all duration-700 ${rate >= 100 ? 'bg-green-400' : 'bg-blue-500'}`}
+                  style={{ width: `${rate}%` }}
+                />
+              </div>
+              <p className="text-xs text-gray-400">
+                {rate >= 100 ? '🎉 목표 달성!' : `${(goal.monthlyDistanceKm - goal.currentDistanceKm).toFixed(1)} km 남음`}
+              </p>
+            </div>
+          ) : null}
+
+          {/* 목표 설정 폼 */}
+          {isEditing && !confirming && (
+            <div className="space-y-2 mt-1">
+              {goal && (
+                <p className="text-xs text-gray-400">
+                  현재 목표: <span className="font-semibold text-gray-600">{goal.monthlyDistanceKm} km</span>
+                </p>
+              )}
+              <div className="flex gap-1.5">
+                <input
+                  type="number"
+                  min="0"
+                  step="0.1"
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSaveClick()}
+                  placeholder="목표 거리 (km)"
+                  className="flex-1 border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-200 transition-all"
+                />
+                <button
+                  onClick={handleSaveClick}
+                  className="px-3 py-1.5 bg-blue-500 text-white text-xs rounded-lg hover:bg-blue-600 transition-colors font-medium"
+                >
+                  저장
+                </button>
+                {goal && (
+                  <button onClick={handleCancel} className="px-2 py-1.5 text-xs text-gray-400 hover:text-gray-600">
+                    취소
+                  </button>
+                )}
+              </div>
+              {inputError && <p className="text-red-500 text-xs">⚠ {inputError}</p>}
+              {saveError && <p className="text-red-500 text-xs">⚠ {saveError}</p>}
+            </div>
+          )}
+
+          {confirming && (
+            <div className="border border-amber-200 bg-amber-50 rounded-lg p-2.5 space-y-2 mt-1">
+              <p className="text-xs text-amber-800">
+                목표를 <span className="font-bold">{input} km</span>로 변경할까요?
+              </p>
+              <div className="flex gap-1.5">
+                <button
+                  onClick={handleConfirm}
+                  disabled={saving}
+                  className="px-3 py-1 bg-blue-500 text-white text-xs rounded-md hover:bg-blue-600 disabled:opacity-50 transition-colors"
+                >
+                  {saving ? '저장 중...' : '확인'}
+                </button>
+                <button onClick={() => setConfirming(false)} className="px-3 py-1 text-xs text-gray-500 hover:text-gray-700">
+                  취소
+                </button>
+              </div>
+            </div>
+          )}
         </div>
-      )}
+
+        {/* 오른쪽: 최대 거리 */}
+        {maxDistance != null && !isEditing && (
+          <div className="shrink-0 flex flex-col justify-center h-full  text-right border-l border-gray-100 pl-4">
+            <p className="text-xs text-gray-400 mb-0.5">최대 거리</p>
+            <p className="text-xl font-bold text-gray-900">{maxDistance.toFixed(1)}<span className="text-xs text-gray-400">km</span></p>
+          </div>
+        )}
+      </div>
     </section>
   )
 }

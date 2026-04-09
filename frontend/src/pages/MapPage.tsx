@@ -102,29 +102,34 @@ export default function MapPage({ focusDate }: Props) {
   }, [focusDate])
 
   return (
-    <section className="rounded-xl overflow-hidden border border-gray-200 shadow-sm">
+    <section className="rounded-2xl overflow-hidden border border-gray-200 shadow-sm bg-white h-[400px] lg:h-full flex flex-col">
       {/* 헤더 */}
-      <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-200">
-        <h2 className="font-semibold text-gray-800">러닝 경로</h2>
-        <div className="flex gap-1">
+      <div className="flex items-center justify-between px-5 py-3 bg-white border-b border-gray-100 flex-shrink-0">
+        <div>
+          <h2 className="font-semibold text-gray-900 text-sm">러닝 경로</h2>
+          <p className="text-xs text-gray-400 mt-0.5">
+            {period === 'today' ? '오늘의 러닝' : '최근 7일 러닝'}
+          </p>
+        </div>
+        <div className="flex gap-1.5">
           {(['today', 'week'] as Period[]).map((p) => (
             <button
               key={p}
               onClick={() => setPeriod(p)}
-              className={`px-3 py-1 text-sm rounded-full transition-colors ${
+              className={`px-3.5 py-1.5 text-xs font-medium rounded-full transition-all ${
                 period === p
-                  ? 'bg-blue-500 text-white'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  ? 'bg-blue-500 text-white shadow-sm'
+                  : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
               }`}
             >
-              {p === 'today' ? '오늘' : '일주일'}
+              {p === 'today' ? '오늘' : '7일'}
             </button>
           ))}
         </div>
       </div>
 
       {/* 지도 컨테이너 */}
-      <div className="relative h-[400px] bg-gray-100">
+      <div className="relative flex-1 min-h-0 bg-gray-100">
         <div ref={mapContainerRef} className="h-full w-full" />
 
         {loading && (
