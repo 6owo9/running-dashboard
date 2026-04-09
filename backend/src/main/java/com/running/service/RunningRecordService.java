@@ -21,14 +21,19 @@ public class RunningRecordService {
     private final GpxParserService gpxParserService;
 
     public RunningRecordResponse upload(MultipartFile file, String title, LocalDate runDate,
-                                        double distanceKm, Integer durationSeconds) throws Exception {
+                                        double distanceKm, Integer durationSeconds) {
         String originalFilename = file.getOriginalFilename();
         if (originalFilename == null || !originalFilename.toLowerCase().endsWith(".gpx")) {
             throw new IllegalArgumentException("GPX 파일만 업로드할 수 있습니다.");
         }
 
         // 파일 바이트를 한 번만 읽어 좌표·날짜 모두 파싱
-        byte[] fileBytes = file.getBytes();
+        byte[] fileBytes;
+        try {
+            fileBytes = file.getBytes();
+        } catch (Exception e) {
+            throw new IllegalArgumentException("파일을 읽는 데 실패했습니다.");
+        }
         String coordinatesJson = gpxParserService.parseCoordinates(new ByteArrayInputStream(fileBytes));
 
         // runDate 미입력 시 GPX time 태그에서 추출, 없으면 오늘
@@ -38,10 +43,17 @@ public class RunningRecordService {
             resolvedDate = (gpxDate != null) ? gpxDate : LocalDate.now();
         }
 
+        // distanceKm 미입력(0) 시 좌표에서 자동 계산
+        double resolvedDistance = distanceKm;
+        if (resolvedDistance == 0) {
+            var coords = gpxParserService.parseCoordinateJson(coordinatesJson);
+            resolvedDistance = gpxParserService.calculateDistanceKm(coords);
+        }
+
         RunningRecord record = new RunningRecord();
         record.setTitle(title);
         record.setRunDate(resolvedDate);
-        record.setDistanceKm(distanceKm);
+        record.setDistanceKm(resolvedDistance);
         record.setDurationSeconds(durationSeconds);
         record.setCoordinates(coordinatesJson);
 

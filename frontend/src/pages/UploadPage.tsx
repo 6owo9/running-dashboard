@@ -3,6 +3,7 @@ import { uploadGpx, getRunningRecords } from '../api/runningApi'
 
 interface RunningRecord {
   id: number
+  title: string
   runDate: string
   distanceKm: number
   durationSeconds: number | null
@@ -27,7 +28,7 @@ function formatPace(distanceKm: number, durationSeconds: number): string {
   return `${min}'${String(sec).padStart(2, '0')}"`
 }
 
-function Calendar({ records }: { records: RunningRecord[] }) {
+function Calendar({ records, onFocusDate, focusDate }: { records: RunningRecord[]; onFocusDate: (date: string) => void; focusDate?: string | null }) {
   const today = new Date()
   const [year, setYear] = useState(today.getFullYear())
   const [month, setMonth] = useState(today.getMonth())
@@ -64,10 +65,17 @@ function Calendar({ records }: { records: RunningRecord[] }) {
           const dateStr = `${monthPrefix}-${String(day).padStart(2, '0')}`
           const isToday = dateStr === todayStr
           const hasRecord = recordDates.has(dateStr)
+          const isFocused = dateStr === focusDate
           return (
-            <div key={dateStr} className="flex flex-col items-center py-0.5">
+            <div
+              key={dateStr}
+              className={`flex flex-col items-center py-0.5 ${hasRecord ? 'cursor-pointer' : ''}`}
+              onClick={() => hasRecord && onFocusDate(dateStr)}
+            >
               <span className={`text-xs w-6 h-6 flex items-center justify-center rounded-full
-                ${isToday ? 'bg-blue-500 text-white font-semibold' : 'text-gray-700'}`}>
+                ${isToday ? 'bg-blue-500 text-white font-semibold' : 'text-gray-700'}
+                ${isFocused && !isToday ? 'ring-2 ring-blue-400' : ''}
+                ${hasRecord && !isToday && !isFocused ? 'hover:bg-gray-100' : ''}`}>
                 {day}
               </span>
               {hasRecord
@@ -81,7 +89,12 @@ function Calendar({ records }: { records: RunningRecord[] }) {
   )
 }
 
-export default function UploadPage() {
+interface Props {
+  onFocusDate: (date: string) => void
+  focusDate?: string | null
+}
+
+export default function UploadPage({ onFocusDate, focusDate }: Props) {
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [lastUploaded, setLastUploaded] = useState<RunningRecord | null>(null)
@@ -111,6 +124,11 @@ export default function UploadPage() {
     }
     if (file.size > 10 * 1024 * 1024) {
       setUploadError('파일 크기는 10MB 이하여야 합니다.')
+      return
+    }
+    const titleFromFile = file.name.replace(/\.[^.]+$/, '')
+    if (records.some((r) => r.title === titleFromFile)) {
+      window.alert(`이미 같은 이름의 기록이 있습니다.\n(${titleFromFile})`)
       return
     }
     setUploading(true)
@@ -149,7 +167,7 @@ export default function UploadPage() {
       </div>
 
       {/* 캘린더 */}
-      <Calendar records={records} />
+      <Calendar records={records} onFocusDate={onFocusDate} focusDate={focusDate} />
 
       {/* 업로드 영역 */}
       <label
@@ -220,7 +238,13 @@ export default function UploadPage() {
         ) : (
           <ul className="divide-y divide-gray-100 max-h-52 overflow-y-auto">
             {records.map((r) => (
-              <li key={r.id} className="flex justify-between items-center py-2 pr-1">
+              <li
+                key={r.id}
+                className={`flex justify-between items-center py-2 pr-1 cursor-pointer rounded transition-colors ${
+                  r.runDate === focusDate ? 'bg-blue-50' : 'hover:bg-gray-50'
+                }`}
+                onClick={() => onFocusDate(r.runDate)}
+              >
                 <span className="text-sm text-gray-700">{r.runDate}</span>
                 <span className="text-sm text-gray-500">
                   {r.distanceKm.toFixed(2)} km

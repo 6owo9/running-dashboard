@@ -26,7 +26,7 @@ public class RunningRecordController {
             @RequestParam(value = "runDate", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate runDate,
             @RequestParam(value = "distanceKm", required = false, defaultValue = "0") double distanceKm,
             @RequestParam(value = "durationSeconds", required = false) Integer durationSeconds
-    ) throws Exception {
+    ) {
         // title 미입력 시 파일명(확장자 제거) 사용
         String resolvedTitle = (title != null && !title.isBlank())
                 ? title

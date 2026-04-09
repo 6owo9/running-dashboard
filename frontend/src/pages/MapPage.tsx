@@ -6,13 +6,16 @@ type Period = 'today' | 'week'
 
 interface RunningRecord {
   id: number
-  date: string
+  runDate: string
   distanceKm: number
-  durationMin: number
   coordinates: number[][]
 }
 
-export default function MapPage() {
+interface Props {
+  focusDate?: string | null
+}
+
+export default function MapPage({ focusDate }: Props) {
   const mapContainerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<L.Map | null>(null)
   const [period, setPeriod] = useState<Period>('today')
@@ -56,7 +59,6 @@ export default function MapPage() {
     const map = mapRef.current
     if (!map) return
 
-    // 기존 폴리라인·마커 제거 (타일 레이어 유지)
     map.eachLayer((layer) => {
       if (layer instanceof L.Polyline || layer instanceof L.CircleMarker) {
         map.removeLayer(layer)
@@ -82,6 +84,22 @@ export default function MapPage() {
       map.fitBounds(L.latLngBounds(allLatLngs), { padding: [20, 20] })
     }
   }, [records])
+
+  // 날짜 포커싱: 해당 날짜 기록을 표출하고 지도 이동
+  useEffect(() => {
+    if (!focusDate || !mapRef.current) return
+    getRunningRecords().then((res) => {
+      const all: RunningRecord[] = res.data ?? []
+      const focused = all.filter((r) => r.runDate === focusDate)
+      if (focused.length > 0) setRecords(focused)
+      const latlngs: L.LatLngTuple[] = focused.flatMap((r) =>
+        r.coordinates.map((c) => [c[0], c[1]] as L.LatLngTuple)
+      )
+      if (latlngs.length > 0 && mapRef.current) {
+        mapRef.current.fitBounds(L.latLngBounds(latlngs), { padding: [30, 30] })
+      }
+    })
+  }, [focusDate])
 
   return (
     <section className="rounded-xl overflow-hidden border border-gray-200 shadow-sm">
